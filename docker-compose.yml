@@ -55,6 +55,31 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
 
+  # ======================= MICROSERVICIOS =======================
+  # Core transaccional: catálogo, usuarios, pagos y boletos. Solo accede a reservas_tx.
+  service-java:
+    build: ./service-java
+    container_name: reservas-service-java
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: ${JAVA_PORT}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${TX_DB}
+      SPRING_DATASOURCE_USERNAME: ${TX_USER}
+      SPRING_DATASOURCE_PASSWORD: ${TX_PASSWORD}
+    expose:
+      - "${JAVA_PORT}"
+    networks:
+      - backend-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${JAVA_PORT}/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
 networks:
   # Red interna: sin salida a internet ni puertos publicables
   backend-net:
