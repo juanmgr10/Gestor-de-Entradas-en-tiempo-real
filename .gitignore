@@ -1,0 +1,26 @@
+# Entorno
+.env
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Java
+target/
+*.class
+
+# Go
+service-go/bin/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# IDE / SO
+.idea/
+.vscode/
+*.iml
+.DS_Store
