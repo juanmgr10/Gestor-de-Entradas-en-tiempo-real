@@ -39,10 +39,9 @@ La restricción `UNIQUE (showtime_id, seat_id)` evita la doble venta aunque dos 
 ## Levantar el proyecto
 
 ```bash
-cd sistema-reservas
 cp .env.example .env
-docker-compose up -d
+docker compose up -d
 ```
 
 > Si cambias credenciales de Postgres después del primer arranque, borra el volumen:
-> `docker-compose down -v`.
+> `docker compose down -v`.
