@@ -76,4 +76,4 @@ docker compose up -d
 ```
 
 > Si cambias credenciales de Postgres después del primer arranque, borra el volumen:
-> `docker-compose down -v`.
+> `docker compose down -v`.
