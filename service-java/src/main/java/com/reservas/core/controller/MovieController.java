@@ -4,18 +4,21 @@ import com.reservas.core.dto.MovieResponse;
 import com.reservas.core.dto.ShowtimeResponse;
 import com.reservas.core.service.MovieService;
 import com.reservas.core.service.ShowtimeService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/movies")
-@RequiredArgsConstructor
 public class MovieController {
 
     private final MovieService movieService;
     private final ShowtimeService showtimeService;
+
+    public MovieController(MovieService movieService, ShowtimeService showtimeService) {
+        this.movieService = movieService;
+        this.showtimeService = showtimeService;
+    }
 
     @GetMapping
     public List<MovieResponse> findAll() {

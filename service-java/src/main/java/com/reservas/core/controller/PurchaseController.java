@@ -4,16 +4,18 @@ import com.reservas.core.dto.PurchaseRequest;
 import com.reservas.core.dto.PurchaseResponse;
 import com.reservas.core.service.PurchaseService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/purchases")
-@RequiredArgsConstructor
 public class PurchaseController {
 
     private final PurchaseService purchaseService;
+
+    public PurchaseController(PurchaseService purchaseService) {
+        this.purchaseService = purchaseService;
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

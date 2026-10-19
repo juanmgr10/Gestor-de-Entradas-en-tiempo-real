@@ -9,8 +9,8 @@ import com.reservas.core.entity.Ticket;
 import com.reservas.core.entity.User;
 import com.reservas.core.exception.SeatAlreadySoldException;
 import com.reservas.core.repository.TicketRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,16 +21,24 @@ import java.util.List;
  * Confirma una compra: valida asientos, cobra y emite boletos en una sola transacción.
  * La verificación del bloqueo temporal (Redis) la orquesta el API Gateway antes de llamar aquí.
  */
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class PurchaseService {
+
+    private static final Logger log = LoggerFactory.getLogger(PurchaseService.class);
 
     private final UserService userService;
     private final ShowtimeService showtimeService;
     private final PaymentService paymentService;
     private final SeatValidator seatValidator;
     private final TicketRepository ticketRepository;
+
+    public PurchaseService(UserService userService, ShowtimeService showtimeService, PaymentService paymentService, SeatValidator seatValidator, TicketRepository ticketRepository) {
+        this.userService = userService;
+        this.showtimeService = showtimeService;
+        this.paymentService = paymentService;
+        this.seatValidator = seatValidator;
+        this.ticketRepository = ticketRepository;
+    }
 
     @Transactional
     public PurchaseResponse purchase(PurchaseRequest request) {

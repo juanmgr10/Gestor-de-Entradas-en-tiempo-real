@@ -1,9 +1,6 @@
 package com.reservas.core.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -11,9 +8,6 @@ import java.util.UUID;
 /** Boleto definitivo: un asiento vendido para una función. */
 @Entity
 @Table(name = "tickets")
-@Getter
-@Setter
-@NoArgsConstructor
 public class Ticket {
 
     @Id
@@ -45,5 +39,61 @@ public class Ticket {
     void onCreate() {
         code = UUID.randomUUID().toString();
         issuedAt = OffsetDateTime.now();
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public Showtime getShowtime() {
+        return showtime;
+    }
+
+    public void setShowtime(Showtime showtime) {
+        this.showtime = showtime;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public Payment getPayment() {
+        return payment;
+    }
+
+    public void setPayment(Payment payment) {
+        this.payment = payment;
+    }
+
+    public String getSeatId() {
+        return seatId;
+    }
+
+    public void setSeatId(String seatId) {
+        this.seatId = seatId;
+    }
+
+    public OffsetDateTime getIssuedAt() {
+        return issuedAt;
+    }
+
+    public void setIssuedAt(OffsetDateTime issuedAt) {
+        this.issuedAt = issuedAt;
     }
 }

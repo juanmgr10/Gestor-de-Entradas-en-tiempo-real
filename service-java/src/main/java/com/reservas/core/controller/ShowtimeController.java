@@ -3,15 +3,17 @@ package com.reservas.core.controller;
 import com.reservas.core.dto.ShowtimeResponse;
 import com.reservas.core.dto.SoldSeatsResponse;
 import com.reservas.core.service.ShowtimeService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/showtimes")
-@RequiredArgsConstructor
 public class ShowtimeController {
 
     private final ShowtimeService showtimeService;
+
+    public ShowtimeController(ShowtimeService showtimeService) {
+        this.showtimeService = showtimeService;
+    }
 
     @GetMapping("/{id}")
     public ShowtimeResponse findById(@PathVariable Long id) {

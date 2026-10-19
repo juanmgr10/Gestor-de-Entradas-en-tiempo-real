@@ -68,6 +68,23 @@ Eventos publicados en Redis Pub/Sub:
 
 La expiración se detecta con las notificaciones de Redis (`__keyevent@0__:expired`).
 
+### service-python (FastAPI · Python 3.12)
+Motor de analíticas: registra compras confirmadas y calcula estadísticas de ventas. Solo se conecta a `reservas_analytics`.
+Puerto interno `8000` (no expuesto al host). La tabla `purchase_events` se crea al iniciar el servicio.
+
+Capas: `api/routes` → `services` → `repositories` → `models`, con `schemas` (Pydantic), `core` (configuración y errores) y `db` (sesión async con SQLAlchemy + asyncpg).
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/events/purchase-confirmed` | Registra el evento `purchase.confirmed` (lo reenvía el gateway) → `201` registrado, `200` duplicado |
+| GET | `/stats/summary` | Ingresos totales, boletos vendidos, compras, clientes únicos y precio promedio |
+| GET | `/stats/movies?limit=10` | Películas ordenadas por ingresos |
+| GET | `/stats/daily?days=7` | Boletos e ingresos por día |
+| GET | `/health` | Healthcheck (verifica la base de datos) |
+
+El registro es idempotente por `paymentId`: si el mismo evento llega dos veces, solo se cuenta una vez.
+JSON en camelCase y errores con el formato `{status, message, details}`, igual que los demás servicios.
+
 ## Levantar el proyecto
 
 ```bash

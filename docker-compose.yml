@@ -106,6 +106,30 @@ services:
       retries: 5
       start_period: 5s
 
+  # Motor de analíticas: registra compras confirmadas y expone estadísticas. Solo accede a reservas_analytics.
+  service-python:
+    build: ./service-python
+    container_name: reservas-service-python
+    restart: unless-stopped
+    environment:
+      PORT: ${PYTHON_PORT}
+      DATABASE_URL: postgresql+asyncpg://${ANALYTICS_USER}:${ANALYTICS_PASSWORD}@postgres:5432/${ANALYTICS_DB}
+      DB_POOL_SIZE: "5"
+      LOG_LEVEL: INFO
+    expose:
+      - "${PYTHON_PORT}"
+    networks:
+      - backend-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, urllib.request; urllib.request.urlopen(f\"http://localhost:{os.environ['PORT']}/health\", timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 networks:
   # Red interna: sin salida a internet ni puertos publicables
   backend-net:

@@ -7,20 +7,24 @@ import com.reservas.core.exception.ResourceNotFoundException;
 import com.reservas.core.repository.MovieRepository;
 import com.reservas.core.repository.ShowtimeRepository;
 import com.reservas.core.repository.TicketRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ShowtimeService {
 
     private final ShowtimeRepository showtimeRepository;
     private final MovieRepository movieRepository;
     private final TicketRepository ticketRepository;
+
+    public ShowtimeService(ShowtimeRepository showtimeRepository, MovieRepository movieRepository, TicketRepository ticketRepository) {
+        this.showtimeRepository = showtimeRepository;
+        this.movieRepository = movieRepository;
+        this.ticketRepository = ticketRepository;
+    }
 
     public List<ShowtimeResponse> findByMovie(Long movieId) {
         if (!movieRepository.existsById(movieId)) {

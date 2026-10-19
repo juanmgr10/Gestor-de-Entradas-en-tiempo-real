@@ -5,16 +5,18 @@ import com.reservas.core.dto.UserResponse;
 import com.reservas.core.entity.User;
 import com.reservas.core.exception.ResourceNotFoundException;
 import com.reservas.core.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class UserService {
 
     private final UserRepository userRepository;
+
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     /** Registra al usuario o devuelve el existente con el mismo email (idempotente). */
     @Transactional
