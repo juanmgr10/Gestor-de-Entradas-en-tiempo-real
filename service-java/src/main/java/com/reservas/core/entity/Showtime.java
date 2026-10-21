@@ -33,6 +33,11 @@ public class Showtime {
     @Column(name = "seat_columns", nullable = false)
     private Integer seatColumns;
 
+    // Horario fijo que generó la función (null en funciones antiguas)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "schedule_id")
+    private ShowtimeSchedule schedule;
+
     public Long getId() {
         return id;
     }
@@ -87,5 +92,13 @@ public class Showtime {
 
     public void setSeatColumns(Integer seatColumns) {
         this.seatColumns = seatColumns;
+    }
+
+    public ShowtimeSchedule getSchedule() {
+        return schedule;
+    }
+
+    public void setSchedule(ShowtimeSchedule schedule) {
+        this.schedule = schedule;
     }
 }

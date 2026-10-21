@@ -10,6 +10,7 @@ import com.reservas.core.repository.TicketRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -26,11 +27,12 @@ public class ShowtimeService {
         this.ticketRepository = ticketRepository;
     }
 
+    /** Solo funciones futuras; las pasadas se conservan para el historial de compras. */
     public List<ShowtimeResponse> findByMovie(Long movieId) {
         if (!movieRepository.existsById(movieId)) {
             throw new ResourceNotFoundException("la película", movieId);
         }
-        return showtimeRepository.findByMovieIdWithMovie(movieId).stream()
+        return showtimeRepository.findUpcomingByMovieId(movieId, OffsetDateTime.now()).stream()
                 .map(ShowtimeResponse::from)
                 .toList();
     }

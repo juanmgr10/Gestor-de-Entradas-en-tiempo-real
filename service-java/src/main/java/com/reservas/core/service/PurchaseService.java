@@ -7,6 +7,7 @@ import com.reservas.core.entity.Payment;
 import com.reservas.core.entity.Showtime;
 import com.reservas.core.entity.Ticket;
 import com.reservas.core.entity.User;
+import com.reservas.core.exception.BusinessException;
 import com.reservas.core.exception.SeatAlreadySoldException;
 import com.reservas.core.repository.TicketRepository;
 import org.slf4j.Logger;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -46,6 +48,9 @@ public class PurchaseService {
         Showtime showtime = showtimeService.getEntity(request.showtimeId());
         List<String> seatIds = request.seatIds();
 
+        if (!showtime.getStartsAt().isAfter(OffsetDateTime.now())) {
+            throw new BusinessException("La función ya comenzó; no se pueden comprar boletos");
+        }
         seatValidator.validate(showtime, seatIds);
 
         List<String> alreadySold = ticketRepository.findSoldAmong(showtime.getId(), seatIds);

@@ -6,9 +6,12 @@ const { createLockService } = require('./services/lockService');
 const { createAnalyticsService } = require('./services/analyticsService');
 const { createSeatMapService } = require('./services/seatMapService');
 const { createPurchaseOrchestrator } = require('./services/purchaseOrchestrator');
+const { createTokenService } = require('./services/tokenService');
 const { createMovieController } = require('./controllers/movieController');
 const { createShowtimeController } = require('./controllers/showtimeController');
-const { createUserController } = require('./controllers/userController');
+const { createAuthController } = require('./controllers/authController');
+const { createProfileController } = require('./controllers/profileController');
+const { createTicketController } = require('./controllers/ticketController');
 const { createLockController } = require('./controllers/lockController');
 const { createPurchaseController } = require('./controllers/purchaseController');
 const { createStatsController } = require('./controllers/statsController');
@@ -26,18 +29,26 @@ const analyticsService = createAnalyticsService(
 );
 const seatMapService = createSeatMapService({ catalogService, lockService });
 const purchaseOrchestrator = createPurchaseOrchestrator({ catalogService, lockService });
+const tokenService = createTokenService(config.jwt);
 
 const controllers = {
   movies: createMovieController({ catalogService }),
   showtimes: createShowtimeController({ catalogService, seatMapService }),
-  users: createUserController({ catalogService }),
+  auth: createAuthController({ catalogService, tokenService }),
+  profile: createProfileController({ catalogService }),
+  tickets: createTicketController({ catalogService }),
   locks: createLockController({ lockService }),
   purchases: createPurchaseController({ purchaseOrchestrator }),
   stats: createStatsController({ analyticsService }),
 };
 
 let subscriber;
-const app = createApp({ controllers, corsOrigin: config.corsOrigin, isReady: () => subscriber?.isReady() ?? false });
+const app = createApp({
+  controllers,
+  tokenService,
+  corsOrigin: config.corsOrigin,
+  isReady: () => subscriber?.isReady() ?? false,
+});
 const server = http.createServer(app);
 const io = initSocket(server, config.corsOrigin);
 subscriber = startSubscriber({ redisUrl: config.redisUrl, io, analyticsService });

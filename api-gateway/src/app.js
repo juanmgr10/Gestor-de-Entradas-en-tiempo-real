@@ -6,7 +6,7 @@ const { createApiRouter } = require('./routes');
 const { notFound, errorHandler } = require('./middlewares/errorHandler');
 
 /** Construye la app Express a partir de los controladores ya inyectados. */
-function createApp({ controllers, corsOrigin, isReady }) {
+function createApp({ controllers, tokenService, corsOrigin, isReady }) {
   const app = express();
 
   app.disable('x-powered-by');
@@ -20,7 +20,7 @@ function createApp({ controllers, corsOrigin, isReady }) {
     res.status(up ? 200 : 503).json({ status: up ? 'UP' : 'DOWN', redis: up ? 'connected' : 'disconnected' });
   });
 
-  app.use('/api', createApiRouter(controllers));
+  app.use('/api', createApiRouter(controllers, tokenService));
 
   app.use(notFound);
   app.use(errorHandler);

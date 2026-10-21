@@ -20,6 +20,19 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+app:
+  # Zona horaria de la cartelera: las horas de los horarios fijos son locales a esta zona
+  timezone: ${APP_TIMEZONE:America/Caracas}
+  schedule:
+    days-ahead: ${APP_SCHEDULE_DAYS_AHEAD:7}
+    cron: "0 5 0 * * *"   # todos los días a las 00:05
+  # Administrador creado al iniciar (si no existe). Vacío = no se crea.
+  admin:
+    name: ${ADMIN_NAME:Administrador}
+    username: ${ADMIN_USERNAME:admin}
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
+
 management:
   endpoints:
     web:

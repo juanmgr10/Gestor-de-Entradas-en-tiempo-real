@@ -5,22 +5,27 @@ const seatId = z.string().regex(/^[A-Z][1-9][0-9]?$/, 'formato de asiento invál
 
 const idParam = z.object({ id });
 
-const lockBody = z.object({
-  showtimeId: id,
-  seatId,
-  userId: id,
-});
+const username = z
+  .string()
+  .trim()
+  .regex(/^[a-zA-Z0-9._-]{3,30}$/, 'de 3 a 30 caracteres: letras, números, punto, guion o guion bajo');
 
-const unlockParams = z.object({ showtimeId: id, seatId });
-const unlockQuery = z.object({ userId: id });
-
-const userBody = z.object({
+const registerBody = z.object({
   name: z.string().trim().min(1).max(100),
+  username,
   email: z.string().trim().email().max(150),
+  password: z.string().min(8, 'la contraseña debe tener al menos 8 caracteres').max(72),
 });
+
+const loginBody = z.object({
+  username: z.string().trim().min(1),
+  password: z.string().min(1),
+});
+
+const lockBody = z.object({ showtimeId: id, seatId });
+const unlockParams = z.object({ showtimeId: id, seatId });
 
 const purchaseBody = z.object({
-  userId: id,
   showtimeId: id,
   seatIds: z
     .array(seatId)
@@ -30,16 +35,19 @@ const purchaseBody = z.object({
   paymentMethod: z.enum(['CARD', 'CASH', 'TRANSFER']),
 });
 
+const ticketCodeParam = z.object({ code: z.string().uuid('código de boleto inválido') });
+
 const moviesStatsQuery = z.object({ limit: z.coerce.number().int().min(1).max(50).default(10) });
 const dailyStatsQuery = z.object({ days: z.coerce.number().int().min(1).max(90).default(7) });
 
 module.exports = {
   idParam,
+  registerBody,
+  loginBody,
   lockBody,
   unlockParams,
-  unlockQuery,
-  userBody,
   purchaseBody,
+  ticketCodeParam,
   moviesStatsQuery,
   dailyStatsQuery,
 };

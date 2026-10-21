@@ -2,9 +2,12 @@ package com.reservas.core.dto;
 
 import com.reservas.core.entity.User;
 
-public record UserResponse(Long id, String name, String email) {
+import java.time.OffsetDateTime;
+
+public record UserResponse(Long id, String name, String username, String email, User.Role role,
+                           OffsetDateTime createdAt) {
 
     public static UserResponse from(User u) {
-        return new UserResponse(u.getId(), u.getName(), u.getEmail());
+        return new UserResponse(u.getId(), u.getName(), u.getUsername(), u.getEmail(), u.getRole(), u.getCreatedAt());
     }
 }

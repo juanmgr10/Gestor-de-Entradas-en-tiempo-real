@@ -26,6 +26,16 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), List.of());
     }
 
+    @ExceptionHandler({EmailAlreadyRegisteredException.class, UsernameTakenException.class})
+    public ResponseEntity<ErrorResponse> handleAccountConflict(RuntimeException ex) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), List.of());
+    }
+
     @ExceptionHandler(SeatAlreadySoldException.class)
     public ResponseEntity<ErrorResponse> handleSeatSold(SeatAlreadySoldException ex) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), ex.getSeatIds());

@@ -1,4 +1,6 @@
 # Orquestación del Sistema de Reserva de Entradas.
+# Cada variable tiene un valor por defecto (el de .env.example): `docker compose up -d` funciona sin .env.
+# Si existe un .env, sus valores tienen prioridad.
 # Solo frontend y api-gateway publican puertos al host; el resto vive en backend-net (red interna).
 
 name: sistema-reservas
@@ -10,16 +12,16 @@ services:
     container_name: reservas-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secret}
       POSTGRES_DB: postgres
       # Consumidas por el script de inicialización
-      TX_DB: ${TX_DB}
-      TX_USER: ${TX_USER}
-      TX_PASSWORD: ${TX_PASSWORD}
-      ANALYTICS_DB: ${ANALYTICS_DB}
-      ANALYTICS_USER: ${ANALYTICS_USER}
-      ANALYTICS_PASSWORD: ${ANALYTICS_PASSWORD}
+      TX_DB: ${TX_DB:-reservas_tx}
+      TX_USER: ${TX_USER:-tx_user}
+      TX_PASSWORD: ${TX_PASSWORD:-tx_secret}
+      ANALYTICS_DB: ${ANALYTICS_DB:-reservas_analytics}
+      ANALYTICS_USER: ${ANALYTICS_USER:-analytics_user}
+      ANALYTICS_PASSWORD: ${ANALYTICS_PASSWORD:-analytics_secret}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
@@ -28,7 +30,7 @@ services:
     networks:
       - backend-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -40,7 +42,7 @@ services:
     # notify-keyspace-events Ex: emite eventos cuando expira una llave (liberación de asientos)
     command: >
       redis-server
-      --requirepass ${REDIS_PASSWORD}
+      --requirepass ${REDIS_PASSWORD:-redis_secret}
       --notify-keyspace-events Ex
       --appendonly no
     expose:
@@ -53,7 +55,7 @@ services:
       timeout: 3s
       retries: 10
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
 
   # ======================= MICROSERVICIOS =======================
   # Core transaccional: catálogo, usuarios, pagos y boletos. Solo accede a reservas_tx.
@@ -62,19 +64,25 @@ services:
     container_name: reservas-service-java
     restart: unless-stopped
     environment:
-      SERVER_PORT: ${JAVA_PORT}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${TX_DB}
-      SPRING_DATASOURCE_USERNAME: ${TX_USER}
-      SPRING_DATASOURCE_PASSWORD: ${TX_PASSWORD}
+      SERVER_PORT: ${JAVA_PORT:-8080}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${TX_DB:-reservas_tx}
+      SPRING_DATASOURCE_USERNAME: ${TX_USER:-tx_user}
+      SPRING_DATASOURCE_PASSWORD: ${TX_PASSWORD:-tx_secret}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrador}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@butaca.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Caracas}
+      APP_SCHEDULE_DAYS_AHEAD: ${APP_SCHEDULE_DAYS_AHEAD:-7}
     expose:
-      - "${JAVA_PORT}"
+      - "${JAVA_PORT:-8080}"
     networks:
       - backend-net
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:${JAVA_PORT}/actuator/health | grep -q UP"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${JAVA_PORT:-8080}/actuator/health | grep -q UP"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -86,14 +94,14 @@ services:
     container_name: reservas-service-go
     restart: unless-stopped
     environment:
-      PORT: ${GO_PORT}
+      PORT: ${GO_PORT:-8081}
       REDIS_ADDR: redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
       REDIS_DB: "0"
-      LOCK_TTL_SECONDS: ${LOCK_TTL_SECONDS}
+      LOCK_TTL_SECONDS: ${LOCK_TTL_SECONDS:-300}
       GIN_MODE: release
     expose:
-      - "${GO_PORT}"
+      - "${GO_PORT:-8081}"
     networks:
       - backend-net
     depends_on:
@@ -112,12 +120,12 @@ services:
     container_name: reservas-service-python
     restart: unless-stopped
     environment:
-      PORT: ${PYTHON_PORT}
-      DATABASE_URL: postgresql+asyncpg://${ANALYTICS_USER}:${ANALYTICS_PASSWORD}@postgres:5432/${ANALYTICS_DB}
+      PORT: ${PYTHON_PORT:-8000}
+      DATABASE_URL: postgresql+asyncpg://${ANALYTICS_USER:-analytics_user}:${ANALYTICS_PASSWORD:-analytics_secret}@postgres:5432/${ANALYTICS_DB:-reservas_analytics}
       DB_POOL_SIZE: "5"
       LOG_LEVEL: INFO
     expose:
-      - "${PYTHON_PORT}"
+      - "${PYTHON_PORT:-8000}"
     networks:
       - backend-net
     depends_on:
@@ -138,14 +146,16 @@ services:
     restart: unless-stopped
     environment:
       PORT: "4000"
-      CORS_ORIGIN: ${CORS_ORIGIN}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       HTTP_TIMEOUT_MS: "5000"
-      JAVA_SERVICE_URL: http://service-java:${JAVA_PORT}
-      GO_SERVICE_URL: http://service-go:${GO_PORT}
-      PYTHON_SERVICE_URL: http://service-python:${PYTHON_PORT}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      JAVA_SERVICE_URL: http://service-java:${JAVA_PORT:-8080}
+      GO_SERVICE_URL: http://service-go:${GO_PORT:-8081}
+      PYTHON_SERVICE_URL: http://service-python:${PYTHON_PORT:-8000}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-dev_cambiar_este_secreto_por_uno_largo_y_aleatorio}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
     ports:
-      - "${GATEWAY_PORT}:4000"
+      - "${GATEWAY_PORT:-4000}:4000"
     networks:
       - frontend-net
       - backend-net
@@ -164,6 +174,31 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+
+  # ======================= FRONTEND =======================
+  # Next.js: el navegador habla directo con el gateway (URLs públicas incrustadas en el build).
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:4000/api}
+        NEXT_PUBLIC_WS_URL: ${PUBLIC_WS_URL:-http://localhost:4000}
+    container_name: reservas-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    networks:
+      - frontend-net
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      # 127.0.0.1: en Alpine "localhost" resuelve a ::1 y Next solo escucha en IPv4
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000 > /dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 networks:
   # Red interna: sin salida a internet ni puertos publicables
