@@ -85,6 +85,42 @@ Capas: `api/routes` → `services` → `repositories` → `models`, con `schemas
 El registro es idempotente por `paymentId`: si el mismo evento llega dos veces, solo se cuenta una vez.
 JSON en camelCase y errores con el formato `{status, message, details}`, igual que los demás servicios.
 
+### api-gateway (Express · Node 20)
+Único backend expuesto al host (`http://localhost:4000`). Enruta las peticiones HTTP, orquesta la compra y mantiene los WebSockets con el frontend.
+Está en las dos redes: `frontend-net` (para publicar el puerto) y `backend-net` (para llegar a los servicios).
+
+Capas: `routes` → `controllers` → `services` (clientes HTTP de cada microservicio), con `middlewares` (validación zod y errores), `realtime` (Socket.IO y suscriptor Redis) y `config`.
+
+| Método | Ruta | Destino |
+|---|---|---|
+| GET | `/api/movies` · `/api/movies/{id}` · `/api/movies/{id}/showtimes` | service-java |
+| GET | `/api/showtimes/{id}` | service-java |
+| GET | `/api/showtimes/{id}/seats` | Mapa de asientos: vendidos (java) + bloqueos (go) → `free` / `locked` / `sold` |
+| POST | `/api/users` | service-java |
+| POST | `/api/locks` | service-go |
+| DELETE | `/api/locks/{showtimeId}/{seatId}?userId=` | service-go |
+| POST | `/api/purchases` | Compra orquestada (ver abajo) |
+| GET | `/api/stats/summary` · `/api/stats/movies?limit=` · `/api/stats/daily?days=` | service-python |
+| GET | `/health` | Estado del gateway (suscriptor Redis conectado) |
+
+**Compra (`POST /api/purchases`)**:
+1. service-go verifica que el usuario aún tenga bloqueados los asientos (`409` si no).
+2. service-java cobra y emite los boletos.
+3. service-go marca los asientos como vendidos y publica `seat.sold` y `purchase.confirmed`. Este paso se reintenta hasta 3 veces.
+
+**Tiempo real (Socket.IO)**:
+- El cliente emite `showtime:join` / `showtime:leave` con `{showtimeId}`.
+- El gateway está suscrito a Redis y reenvía a la sala de cada función:
+
+| Canal Redis | Acción del gateway |
+|---|---|
+| `seat.locked` | WebSocket `seat:locked` |
+| `seat.released` | WebSocket `seat:released` |
+| `seat.sold` | WebSocket `seat:sold` |
+| `purchase.confirmed` | `POST` a service-python (con reintentos) |
+
+Para ver los eventos en vivo desde la terminal: `cd api-gateway && npm install && npm run ws-test -- 1`.
+
 ## Levantar el proyecto
 
 ```bash

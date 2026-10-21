@@ -130,6 +130,41 @@ services:
       retries: 5
       start_period: 10s
 
+  # ======================= API GATEWAY =======================
+  # Único backend expuesto al host: HTTP (/api) + WebSockets. Puente entre frontend-net y backend-net.
+  api-gateway:
+    build: ./api-gateway
+    container_name: reservas-api-gateway
+    restart: unless-stopped
+    environment:
+      PORT: "4000"
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      HTTP_TIMEOUT_MS: "5000"
+      JAVA_SERVICE_URL: http://service-java:${JAVA_PORT}
+      GO_SERVICE_URL: http://service-go:${GO_PORT}
+      PYTHON_SERVICE_URL: http://service-python:${PYTHON_PORT}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    ports:
+      - "${GATEWAY_PORT}:4000"
+    networks:
+      - frontend-net
+      - backend-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      service-java:
+        condition: service_healthy
+      service-go:
+        condition: service_healthy
+      service-python:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
 networks:
   # Red interna: sin salida a internet ni puertos publicables
   backend-net:
