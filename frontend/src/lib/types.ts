@@ -48,12 +48,19 @@ export interface User {
   username: string;
   email: string;
   role: Role;
+  emailVerified: boolean;
   createdAt: string;
 }
 
 export interface Session {
   token: string;
   user: User;
+}
+
+/** Respuesta del registro: la sesión empieza al verificar el código enviado por email. */
+export interface RegisterPending {
+  verificationRequired: true;
+  user: { username: string; email: string };
 }
 
 export interface Ticket {

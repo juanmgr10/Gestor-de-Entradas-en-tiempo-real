@@ -5,6 +5,7 @@ import com.reservas.core.dto.RegisterRequest;
 import com.reservas.core.dto.UserResponse;
 import com.reservas.core.entity.User;
 import com.reservas.core.exception.EmailAlreadyRegisteredException;
+import com.reservas.core.exception.EmailNotVerifiedException;
 import com.reservas.core.exception.InvalidCredentialsException;
 import com.reservas.core.exception.UsernameTakenException;
 import com.reservas.core.repository.UserRepository;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.*;
 class AuthServiceTest {
 
     @Mock UserRepository userRepository;
+    @Mock EmailVerificationService verificationService;
 
     // Coste bajo para que los tests sean rápidos
     private final PasswordEncoder encoder = new BCryptPasswordEncoder(4);
@@ -35,7 +37,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userRepository, encoder);
+        authService = new AuthService(userRepository, encoder, verificationService);
     }
 
     private User existing(long id, String username, String rawPassword) {
@@ -45,6 +47,7 @@ class AuthServiceTest {
         u.setUsername(username);
         u.setEmail(username + "@test.com");
         u.setPasswordHash(rawPassword == null ? "!" : encoder.encode(rawPassword));
+        u.setEmailVerified(true);
         return u;
     }
 
@@ -63,6 +66,24 @@ class AuthServiceTest {
         assertThat(user.role()).isEqualTo(User.Role.USER);
         assertThat(saved.getValue().getPasswordHash()).isNotEqualTo("secreta123");
         assertThat(encoder.matches("secreta123", saved.getValue().getPasswordHash())).isTrue();
+        assertThat(user.emailVerified()).isFalse();
+        verify(verificationService).issueCode(saved.getValue());
+    }
+
+    @Test
+    void registroReutilizaCuentaQueNuncaVerificoSuEmail() {
+        User pending = existing(7, "ana", "vieja1234");
+        pending.setEmailVerified(false);
+        when(userRepository.findByEmailIgnoreCase("ana@test.com")).thenReturn(Optional.of(pending));
+        when(userRepository.findByUsernameIgnoreCase("ana2")).thenReturn(Optional.empty());
+        when(userRepository.save(pending)).thenReturn(pending);
+
+        UserResponse user = authService.register(new RegisterRequest("Ana", "ana2", "ana@test.com", "nueva1234"));
+
+        assertThat(user.id()).isEqualTo(7L);
+        assertThat(user.username()).isEqualTo("ana2");
+        assertThat(encoder.matches("nueva1234", pending.getPasswordHash())).isTrue();
+        verify(verificationService).issueCode(pending);
     }
 
     @Test
@@ -94,6 +115,9 @@ class AuthServiceTest {
 
         assertThat(user.id()).isEqualTo(5L);
         assertThat(encoder.matches("secreta123", legacy.getPasswordHash())).isTrue();
+        // Reclamar una cuenta antigua exige demostrar que el email es suyo
+        assertThat(legacy.isEmailVerified()).isFalse();
+        verify(verificationService).issueCode(legacy);
     }
 
     @Test
@@ -101,6 +125,32 @@ class AuthServiceTest {
         when(userRepository.findByUsernameIgnoreCase("ana")).thenReturn(Optional.of(existing(1, "ana", "secreta123")));
 
         assertThat(authService.login(new LoginRequest("ana", "secreta123")).username()).isEqualTo("ana");
+    }
+
+    @Test
+    void loginRechazaEmailSinVerificar() {
+        User pending = existing(1, "ana", "secreta123");
+        pending.setEmailVerified(false);
+        when(userRepository.findByUsernameIgnoreCase("ana")).thenReturn(Optional.of(pending));
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("ana", "secreta123")))
+                .isInstanceOf(EmailNotVerifiedException.class);
+    }
+
+    @Test
+    void reenvioSoloEmiteCodigoSiFaltaVerificar() {
+        User pending = existing(1, "ana", "x");
+        pending.setEmailVerified(false);
+        when(userRepository.findByUsernameIgnoreCase("ana")).thenReturn(Optional.of(pending));
+        when(userRepository.findByUsernameIgnoreCase("luis")).thenReturn(Optional.of(existing(2, "luis", "x")));
+        when(userRepository.findByUsernameIgnoreCase("nadie")).thenReturn(Optional.empty());
+
+        authService.resendCode("ana");
+        authService.resendCode("luis");
+        authService.resendCode("nadie");
+
+        verify(verificationService).issueCode(pending);
+        verifyNoMoreInteractions(verificationService);
     }
 
     @Test

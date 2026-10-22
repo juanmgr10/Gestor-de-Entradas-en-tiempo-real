@@ -57,6 +57,7 @@ public class AdminInitializer implements ApplicationRunner {
                 });
         admin.setUsername(username);
         admin.setRole(User.Role.ADMIN);
+        admin.setEmailVerified(true);
         if (admin.getPasswordHash() == null || !passwordEncoder.matches(password, admin.getPasswordHash())) {
             admin.setPasswordHash(passwordEncoder.encode(password));
         }

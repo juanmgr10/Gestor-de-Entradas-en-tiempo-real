@@ -6,6 +6,7 @@ import type {
   PaymentMethod,
   Purchase,
   PurchaseHistory,
+  RegisterPending,
   SeatMap,
   Session,
   Showtime,
@@ -69,7 +70,10 @@ const post = <T>(path: string, data: unknown) => request<T>(path, { method: 'POS
 // Autenticación
 export const login = (username: string, password: string) => post<Session>('/auth/login', { username, password });
 export const register = (data: { name: string; username: string; email: string; password: string }) =>
-  post<Session>('/auth/register', data);
+  post<RegisterPending>('/auth/register', data);
+export const verifyEmail = (username: string, code: string) =>
+  post<Session>('/auth/verify-email', { username, code });
+export const resendCode = (username: string) => post<void>('/auth/resend-code', { username });
 export const getMe = () => request<User>('/auth/me');
 
 // Catálogo (público)

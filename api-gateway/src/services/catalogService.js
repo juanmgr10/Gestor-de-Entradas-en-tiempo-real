@@ -9,6 +9,10 @@ function createCatalogService(http) {
 
     register: async ({ name, username, email, password }) =>
       (await http.post('/auth/register', { name, username, email, password })).data,
+    verifyEmail: async ({ username, code }) => (await http.post('/auth/verify-email', { username, code })).data,
+    resendCode: async ({ username }) => {
+      await http.post('/auth/resend-code', { username });
+    },
     login: async ({ username, password }) => (await http.post('/auth/login', { username, password })).data,
     getUser: async (id) => (await http.get(`/users/${id}`)).data,
     getUserPurchases: async (id) => (await http.get(`/users/${id}/purchases`)).data,
