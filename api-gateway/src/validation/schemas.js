@@ -22,6 +22,13 @@ const loginBody = z.object({
   password: z.string().min(1),
 });
 
+const verifyEmailBody = z.object({
+  username: z.string().trim().min(1),
+  code: z.string().regex(/^\d{4}$/, 'el código tiene 4 dígitos'),
+});
+
+const resendCodeBody = z.object({ username: z.string().trim().min(1) });
+
 const lockBody = z.object({ showtimeId: id, seatId });
 const unlockParams = z.object({ showtimeId: id, seatId });
 
@@ -44,6 +51,8 @@ module.exports = {
   idParam,
   registerBody,
   loginBody,
+  verifyEmailBody,
+  resendCodeBody,
   lockBody,
   unlockParams,
   purchaseBody,

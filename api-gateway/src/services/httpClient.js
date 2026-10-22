@@ -18,9 +18,9 @@ function createClient(serviceName, baseURL, timeout) {
         return Promise.reject(new UpstreamError(serviceName, status, message, details));
       }
       if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-        return Promise.reject(new UpstreamError(serviceName, 504, `Tiempo de espera agotado: ${serviceName}`));
+        return Promise.reject(new UpstreamError(serviceName, 504, 'El servidor tardó demasiado en responder. Inténtalo de nuevo'));
       }
-      return Promise.reject(new UpstreamError(serviceName, 502, `Servicio no disponible: ${serviceName}`));
+      return Promise.reject(new UpstreamError(serviceName, 502, 'El servicio no está disponible en este momento. Inténtalo más tarde'));
     },
   );
 

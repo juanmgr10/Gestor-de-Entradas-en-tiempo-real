@@ -40,7 +40,17 @@ expect 200 "funciones de la película $MOVIE_ID"
 SHOWTIME_ID=$(echo "$RESPONSE" | json 'd[0]["id"]')
 
 request POST /auth/register "" "{\"name\":\"Smoke Test\",\"username\":\"$USERNAME\",\"email\":\"$USERNAME@test.local\",\"password\":\"smoke12345\"}"
-expect 201 "registro de $USERNAME"
+expect 201 "registro de $USERNAME (pendiente de verificar)"
+
+request POST /auth/login "" "{\"username\":\"$USERNAME\",\"password\":\"smoke12345\"}"
+expect 403 "iniciar sesión sin verificar el email es rechazado"
+
+# Sin SMTP configurado, service-java escribe el código en su log
+CODE=$(docker compose -f "$(dirname "$0")/../docker-compose.yml" logs service-java 2>/dev/null | sed -n "s/.*$USERNAME@test.local = \([0-9]\{4\}\).*/\1/p" | tail -1)
+[[ -n $CODE ]] || fail "no se encontró el código de verificación en el log (¿MAIL_USERNAME configurado?)"
+
+request POST /auth/verify-email "" "{\"username\":\"$USERNAME\",\"code\":\"$CODE\"}"
+expect 200 "email verificado con el código del log"
 TOKEN=$(echo "$RESPONSE" | json 'd["token"]')
 
 request POST /locks "" "{\"showtimeId\":$SHOWTIME_ID,\"seatId\":\"A1\"}"

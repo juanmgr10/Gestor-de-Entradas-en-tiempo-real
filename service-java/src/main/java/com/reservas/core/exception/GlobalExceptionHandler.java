@@ -36,6 +36,26 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), List.of());
     }
 
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    public ResponseEntity<ErrorResponse> handleEmailNotVerified(EmailNotVerifiedException ex) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(InvalidVerificationCodeException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCode(InvalidVerificationCodeException ex) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(VerificationThrottledException.class)
+    public ResponseEntity<ErrorResponse> handleThrottled(VerificationThrottledException ex) {
+        return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(EmailDeliveryException.class)
+    public ResponseEntity<ErrorResponse> handleEmailDelivery(EmailDeliveryException ex) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), List.of());
+    }
+
     @ExceptionHandler(SeatAlreadySoldException.class)
     public ResponseEntity<ErrorResponse> handleSeatSold(SeatAlreadySoldException ex) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), ex.getSeatIds());

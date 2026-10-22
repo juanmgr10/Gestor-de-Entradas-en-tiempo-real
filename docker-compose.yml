@@ -74,10 +74,17 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Caracas}
       APP_SCHEDULE_DAYS_AHEAD: ${APP_SCHEDULE_DAYS_AHEAD:-7}
+      # SMTP del código de verificación. Sin MAIL_USERNAME el código solo se escribe en el log
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
     expose:
       - "${JAVA_PORT:-8080}"
     networks:
       - backend-net
+      - egress-net   # solo para llegar al servidor SMTP
     depends_on:
       postgres:
         condition: service_healthy
@@ -207,6 +214,9 @@ networks:
     internal: true
   # Red de borde: frontend <-> gateway, permite publicar puertos al host
   frontend-net:
+    driver: bridge
+  # Salida a internet solo para service-java (envío de correos por SMTP); sin puertos publicados
+  egress-net:
     driver: bridge
 
 volumes:

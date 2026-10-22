@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import * as api from '@/lib/api';
 import { loadSession, saveSession } from '@/lib/session';
-import type { Session, User } from '@/lib/types';
+import type { RegisterPending, Session, User } from '@/lib/types';
 
 /** Motivo del último cierre de sesión: manual (botón) o expirado (401 del servidor). */
 export type LogoutReason = 'manual' | 'expired';
@@ -13,7 +13,9 @@ interface AuthContextValue {
   ready: boolean;
   logoutReason: LogoutReason | null;
   login: (username: string, password: string) => Promise<User>;
-  register: (data: RegisterData) => Promise<User>;
+  register: (data: RegisterData) => Promise<RegisterPending>;
+  verifyEmail: (username: string, code: string) => Promise<User>;
+  resendCode: (username: string) => Promise<void>;
   logout: (reason?: LogoutReason) => void;
 }
 
@@ -61,9 +63,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [apply],
   );
 
-  const register = useCallback(
-    async (data: RegisterData) => {
-      const next = await api.register(data);
+  // El registro no inicia sesión: primero hay que verificar el código enviado por email
+  const register = useCallback((data: RegisterData) => api.register(data), []);
+
+  const verifyEmail = useCallback(
+    async (username: string, code: string) => {
+      const next = await api.verifyEmail(username, code);
       setLogoutReason(null);
       apply(next);
       return next.user;
@@ -71,8 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [apply],
   );
 
+  const resendCode = useCallback((username: string) => api.resendCode(username), []);
+
   return (
-    <AuthContext.Provider value={{ user: session?.user ?? null, ready, logoutReason, login, register, logout }}>
+    <AuthContext.Provider value={{ user: session?.user ?? null, ready, logoutReason, login, register, verifyEmail, resendCode, logout }}>
       {children}
     </AuthContext.Provider>
   );

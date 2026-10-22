@@ -54,9 +54,20 @@ docker compose up -d
 
 **Redes**:
 - `backend-net` es `internal: true`: sin salida a internet y sin puertos publicados. Ahí viven las bases y los tres microservicios.
+- `egress-net` da salida a internet solo a `service-java`, para enviar correos por SMTP.
 - `frontend-net` es la red de borde. Solo `frontend` y `api-gateway` publican puertos; el gateway es el único en ambas redes.
 
 ## Flujos principales
+
+### Registro con verificación del email
+
+1. `POST /api/auth/register`: Java crea la cuenta **sin verificar** y envía al email un código de 4 dígitos (vence en 10 min). No se entrega token.
+2. `POST /api/auth/verify-email` con `{username, code}`: si el código es correcto, el email queda verificado y el gateway devuelve `{token, user}`.
+3. Hasta verificar, `POST /api/auth/login` responde `403` y el frontend muestra la pantalla del código.
+
+- El código se guarda hasheado. Admite 5 intentos fallidos (luego `429`) y se puede reenviar cada 60 s con `POST /api/auth/resend-code`.
+- Sin `MAIL_USERNAME` en `.env` no se envían correos: el código se escribe en el log (`docker compose logs service-java`).
+- Los usuarios anteriores a la migración `V8` y el administrador quedan verificados.
 
 ### Concurrencia: seleccionar una butaca
 
@@ -133,7 +144,10 @@ Todos los servicios siguen una **arquitectura por capas** (entrada HTTP → lóg
 
 | Método | Ruta | Destino |
 |---|---|---|
-| POST | `/api/auth/register` · `/api/auth/login` | service-java valida y el gateway firma el JWT → `{token, user}` |
+| POST | `/api/auth/register` | Crea la cuenta y envía el código → `201 {verificationRequired, user}` (sin token) |
+| POST | `/api/auth/verify-email` | `{username, code}` → `{token, user}` · `422` código incorrecto o vencido · `429` demasiados intentos |
+| POST | `/api/auth/resend-code` | `{username}` → `204` · `429` si no pasaron 60 s |
+| POST | `/api/auth/login` | service-java valida y el gateway firma el JWT → `{token, user}` · `403` si el email no está verificado |
 | GET | `/api/auth/me` 🔒 | Usuario actual |
 | GET | `/api/movies` · `/api/movies/{id}` · `/api/movies/{id}/showtimes` | Catálogo y próximas funciones |
 | GET | `/api/showtimes/{id}` | Detalle de la función |
@@ -158,7 +172,8 @@ Todos los servicios siguen una **arquitectura por capas** (entrada HTTP → lóg
 |---|---|---|
 | GET | `/movies`, `/movies/{id}`, `/movies/{id}/showtimes` | Catálogo y funciones futuras |
 | GET | `/showtimes/{id}`, `/showtimes/{id}/sold-seats` | Función y butacas vendidas |
-| POST | `/auth/register`, `/auth/login` | Registro (`409` si el usuario o el email existen) y validación de credenciales (`401`) |
+| POST | `/auth/register`, `/auth/login` | Registro y envío del código (`409` si el usuario o el email verificado existen) y validación de credenciales (`401`, `403` sin verificar) |
+| POST | `/auth/verify-email`, `/auth/resend-code` | Verificación del código y reenvío |
 | GET | `/users/{id}`, `/users/{id}/purchases` | Usuario e historial de compras |
 | GET | `/tickets/{code}` | Verificación de boleto |
 | POST | `/purchases` | Cobro y emisión de boletos (`409` vendida, `422` butaca inexistente o función iniciada) |
@@ -174,6 +189,7 @@ Migraciones Flyway:
 | `V5` | Horarios por día de la semana |
 | `V6` | Nombre de usuario |
 | `V7` | Limpia las funciones de ejemplo de `V2` |
+| `V8` | Verificación del email (`email_verified` y códigos) |
 
 Componentes que corren al iniciar:
 - `ShowtimeScheduler`: genera la cartelera al iniciar y cada día a las 00:05; es idempotente.
@@ -208,6 +224,7 @@ Todas las variables están en `.env.example`, que sirve de documentación y de v
 | `REDIS_PASSWORD` | `redis_secret` | Contraseña de Redis |
 | `JWT_SECRET`, `JWT_EXPIRES_IN` | valor de desarrollo, `8h` | Firma y duración de las sesiones |
 | `ADMIN_NAME`, `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | `admin` / `admin` | Cuenta de administrador; se sincroniza al iniciar |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM` | `smtp.gmail.com`, `587`, vacíos | SMTP para el código de verificación. Gmail: contraseña de aplicación. Vacío = el código va al log |
 | `LOCK_TTL_SECONDS` | `300` | Duración del bloqueo de una butaca |
 | `APP_TIMEZONE`, `APP_SCHEDULE_DAYS_AHEAD` | `America/Caracas`, `7` | Zona horaria de la cartelera y días generados |
 | `GATEWAY_PORT`, `FRONTEND_PORT` | `4000`, `3000` | Puertos publicados |
@@ -224,7 +241,7 @@ Todas las variables están en `.env.example`, que sirve de documentación y de v
 | service-python | `cd service-python && pip install -r requirements-dev.txt && pytest` | Registro idempotente de eventos, validación y cálculo de estadísticas |
 | api-gateway | `cd api-gateway && npm install && npm test` | Orquestación de la compra, mapa de butacas, JWT y control de roles |
 | frontend | `cd frontend && npm install && npm run typecheck` | Verificación de tipos de toda la aplicación |
-| Sistema completo | `./scripts/smoke-test.sh` | Registro → bloqueo → compra → perfil → permisos → QR → analíticas, contra el sistema levantado |
+| Sistema completo | `./scripts/smoke-test.sh` | Registro → verificación del email → bloqueo → compra → perfil → permisos → QR → analíticas, contra el sistema levantado |
 
 `smoke-test.sh` crea un usuario `smoke_<timestamp>` con una compra real.
 
